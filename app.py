@@ -1,0 +1,70 @@
+import pickle
+from flask import Flask, render_template, request
+import nltk
+from nltk.corpus import stopwords
+from nltk.stem.porter import PorterStemmer
+import string
+
+# Flask app
+app = Flask(__name__)
+nltk.download('punkt')
+nltk.download('stopwords')
+
+ps = PorterStemmer()
+stop_words = set(stopwords.words('english'))
+
+def transformed_text(text):
+    text = text.lower()
+    text = nltk.word_tokenize(text)
+
+    y = []
+    for i in text:
+        if i.isalnum():
+            y.append(i)
+
+    text = y[:]
+    y.clear()
+
+    for i in text:
+        if i not in stop_words and i not in string.punctuation:
+            y.append(i)
+
+    text = y[:]
+    y.clear()
+
+    for i in text:
+        y.append(ps.stem(i))
+
+    return " ".join(y)
+
+
+def predict_spam(message):
+    # preprocess
+    transformed_sms = transformed_text(message)
+    # vectorize
+    vector_input = tfidf.transform([transformed_sms])
+    # predict using ml model
+    result = model.predict(vector_input)
+    return result[0]   # ✅ FIXED (return the prediction)
+
+
+# homepage
+@app.route('/')
+def home():
+    return render_template('index.html')
+
+
+# predict
+@app.route('/predict', methods=['POST'])
+def predict():
+    if request.method == 'POST':
+        input_sms = request.form['message']
+        result = predict_spam(input_sms)
+        return render_template('index.html', result=result)
+
+
+if __name__ == "__main__":
+    tfidf = pickle.load(open('vectorizer.pkl', 'rb'))
+    model = pickle.load(open('model.pkl', 'rb'))
+
+    app.run(host='0.0.0.0')
